@@ -2,6 +2,8 @@ import tensorflow as tf
 from pathlib import Path
 from cnnClassifier.entity.config_entity import EvaluationConfig
 from cnnClassifier.utils.common import save_json
+from sklearn.metrics import precision_score, recall_score, f1_score
+import numpy as np
 
 
 
@@ -41,13 +43,35 @@ class Evaluation:
     
 
     def evaluation(self):
-        model = self.load_model(self.config.path_of_model)
-        self._valid_generator()
-        self.score = model.evaluate(self.valid_generator)
+        self.model = self.load_model(self.config.path_of_model) # Load the model
+        self._valid_generator() # Prepare Validation data
+
+        # Predict the labels for the validation data
+        y_pred = self.model.predict(self.valid_generator)
+        y_pred = np.argmax(y_pred, axis=1)
+
+        # Get the true labels from the validation generator
+        y_true = self.valid_generator.classes
+
+        # Calculate metrics
+        self.loss, self.accuracy = self.model.evaluate(self.valid_generator)
+        self.precision = precision_score(y_true, y_pred, average='weighted')
+        self.recall = recall_score(y_true, y_pred, average='weighted')
+        self.f1 = f1_score(y_true, y_pred, average='weighted')
+
+        # self.score = model.evaluate(self.valid_generator)
 
     
     def save_score(self):
-        scores = {"loss": self.score[0], "accuracy": self.score[1]}
+        scores = {
+            "loss": self.loss,
+            "accuracy": self.accuracy,
+            "precision": self.precision,
+            "recall": self.recall,
+            "f1": self.f1
+        }
+        
+        # scores = {"loss": self.score[0], "accuracy": self.score[1]}
         save_json(path=Path("scores.json"), data=scores)
 
     
